@@ -1,0 +1,374 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Voice to Word Converter</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+        
+        .container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            padding: 40px;
+            max-width: 500px;
+            width: 100%;
+        }
+        
+        h1 {
+            text-align: center;
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 28px;
+        }
+        
+        .subtitle {
+            text-align: center;
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 14px;
+        }
+        
+        .input-section {
+            margin-bottom: 30px;
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 10px;
+            color: #333;
+            font-weight: 600;
+            font-size: 14px;
+        }
+        
+        input[type="text"] {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 14px;
+            margin-bottom: 20px;
+            transition: border-color 0.3s;
+        }
+        
+        input[type="text"]:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        
+        .button-group {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        
+        button {
+            flex: 1;
+            padding: 12px;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .record-btn {
+            background: #667eea;
+            color: white;
+        }
+        
+        .record-btn:hover {
+            background: #5568d3;
+            transform: translateY(-2px);
+        }
+        
+        .record-btn.recording {
+            background: #e74c3c;
+            animation: pulse 1.5s infinite;
+        }
+        
+        .stop-btn {
+            background: #e74c3c;
+            color: white;
+        }
+        
+        .stop-btn:hover {
+            background: #c0392b;
+            transform: translateY(-2px);
+        }
+        
+        .stop-btn:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        .upload-btn {
+            background: #27ae60;
+            color: white;
+        }
+        
+        .upload-btn:hover {
+            background: #229954;
+            transform: translateY(-2px);
+        }
+        
+        .send-btn {
+            width: 100%;
+            background: #667eea;
+            color: white;
+            padding: 14px;
+            margin-top: 20px;
+        }
+        
+        .send-btn:hover {
+            background: #5568d3;
+            transform: translateY(-2px);
+        }
+        
+        .send-btn:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        .status {
+            text-align: center;
+            margin-top: 15px;
+            padding: 12px;
+            border-radius: 8px;
+            font-size: 14px;
+            display: none;
+        }
+        
+        .status.info {
+            background: #e3f2fd;
+            color: #1976d2;
+            display: block;
+        }
+        
+        .status.success {
+            background: #e8f5e9;
+            color: #388e3c;
+            display: block;
+        }
+        
+        .status.error {
+            background: #ffebee;
+            color: #d32f2f;
+            display: block;
+        }
+        
+        .recording-time {
+            text-align: center;
+            font-size: 16px;
+            font-weight: bold;
+            color: #667eea;
+            margin: 15px 0;
+            display: none;
+        }
+        
+        .file-input {
+            display: none;
+        }
+        
+        .file-name {
+            color: #666;
+            font-size: 12px;
+            margin-top: 5px;
+        }
+        
+        @keyframes pulse {
+            0%, 100% {
+                box-shadow: 0 0 0 0 rgba(231, 76, 60, 0.7);
+            }
+            50% {
+                box-shadow: 0 0 0 10px rgba(231, 76, 60, 0);
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎤 Voice to Word</h1>
+        <p class="subtitle">Record your voice and convert to Word document</p>
+        
+        <div class="input-section">
+            <label for="webhookUrl">Webhook URL:</label>
+            <input 
+                type="text" 
+                id="webhookUrl" 
+                placeholder="Paste your n8n webhook URL here"
+                value="https://nalekunal.app.n8n.cloud/webhook-test/marathi-voice"
+            >
+        </div>
+        
+        <div class="button-group">
+            <button class="record-btn" id="recordBtn">🎙️ Start Recording</button>
+            <button class="stop-btn" id="stopBtn" disabled>⏹️ Stop Recording</button>
+        </div>
+        
+        <div class="recording-time" id="recordingTime">Recording: 00:00</div>
+        
+        <div class="button-group">
+            <button class="upload-btn" id="uploadBtn">📁 Upload Audio File</button>
+            <input type="file" id="fileInput" class="file-input" accept="audio/*">
+        </div>
+        <div class="file-name" id="fileName"></div>
+        
+        <button class="send-btn" id="sendBtn" disabled>📤 Send & Convert to Word</button>
+        
+        <div class="status" id="status"></div>
+    </div>
+
+    <script>
+        let mediaRecorder;
+        let audioChunks = [];
+        let recordingStartTime;
+        let recordingInterval;
+        let selectedFile = null;
+
+        const recordBtn = document.getElementById('recordBtn');
+        const stopBtn = document.getElementById('stopBtn');
+        const sendBtn = document.getElementById('sendBtn');
+        const uploadBtn = document.getElementById('uploadBtn');
+        const fileInput = document.getElementById('fileInput');
+        const status = document.getElementById('status');
+        const webhookUrl = document.getElementById('webhookUrl');
+        const recordingTime = document.getElementById('recordingTime');
+        const fileName = document.getElementById('fileName');
+
+        // Start Recording
+        recordBtn.addEventListener('click', async () => {
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                mediaRecorder = new MediaRecorder(stream);
+                audioChunks = [];
+
+                mediaRecorder.ondataavailable = (event) => {
+                    audioChunks.push(event.data);
+                };
+
+                mediaRecorder.onstop = () => {
+                    const audioBlob = new Blob(audioChunks, { type: 'audio/wav' });
+                    selectedFile = audioBlob;
+                    sendBtn.disabled = false;
+                    updateStatus('✅ Recording saved! Ready to send.', 'success');
+                    recordBtn.classList.remove('recording');
+                    clearInterval(recordingInterval);
+                    recordingTime.style.display = 'none';
+                };
+
+                mediaRecorder.start();
+                recordBtn.disabled = true;
+                recordBtn.classList.add('recording');
+                stopBtn.disabled = false;
+                recordingStartTime = Date.now();
+                recordingTime.style.display = 'block';
+                updateRecordingTime();
+                recordingInterval = setInterval(updateRecordingTime, 1000);
+                updateStatus('🎤 Recording in progress...', 'info');
+            } catch (error) {
+                updateStatus('❌ Microphone access denied. Please allow access.', 'error');
+            }
+        });
+
+        // Stop Recording
+        stopBtn.addEventListener('click', () => {
+            mediaRecorder.stop();
+            mediaRecorder.stream.getTracks().forEach(track => track.stop());
+            recordBtn.disabled = false;
+            stopBtn.disabled = true;
+        });
+
+        // Upload File
+        uploadBtn.addEventListener('click', () => {
+            fileInput.click();
+        });
+
+        fileInput.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (file) {
+                selectedFile = file;
+                fileName.textContent = `Selected: ${file.name}`;
+                sendBtn.disabled = false;
+                updateStatus('✅ File selected! Ready to send.', 'success');
+            }
+        });
+
+        // Send to n8n
+        sendBtn.addEventListener('click', async () => {
+            if (!webhookUrl.value.trim()) {
+                updateStatus('❌ Please enter webhook URL', 'error');
+                return;
+            }
+
+            if (!selectedFile) {
+                updateStatus('❌ No audio selected', 'error');
+                return;
+            }
+
+            try {
+                sendBtn.disabled = true;
+                updateStatus('📤 Sending to n8n...', 'info');
+
+                const formData = new FormData();
+                formData.append('file', selectedFile, 'voice.wav');
+
+                const response = await fetch(webhookUrl.value.trim(), {
+                    method: 'POST',
+                    body: selectedFile
+                });
+
+                if (response.ok) {
+                    const blob = await response.blob();
+                    const url = window.URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `marathi_transcription_${Date.now()}.docx`;
+                    a.click();
+                    window.URL.revokeObjectURL(url);
+                    updateStatus('✅ File downloaded successfully!', 'success');
+                    selectedFile = null;
+                    fileName.textContent = '';
+                    sendBtn.disabled = true;
+                } else {
+                    updateStatus(`❌ Error: ${response.statusText}`, 'error');
+                }
+            } catch (error) {
+                updateStatus(`❌ Error: ${error.message}`, 'error');
+            } finally {
+                sendBtn.disabled = selectedFile ? false : true;
+            }
+        });
+
+        function updateRecordingTime() {
+            const elapsed = Math.floor((Date.now() - recordingStartTime) / 1000);
+            const mins = Math.floor(elapsed / 60);
+            const secs = elapsed % 60;
+            recordingTime.textContent = `Recording: ${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+        }
+
+        function updateStatus(message, type) {
+            status.textContent = message;
+            status.className = `status ${type}`;
+        }
+    </script>
+</body>
+</html>
