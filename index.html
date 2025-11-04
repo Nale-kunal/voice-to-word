@@ -314,93 +314,40 @@
 
         // Send to n8n
         sendBtn.addEventListener('click', async () => {
-            if (!webhookUrl.value.trim()) {
-                updateStatus('❌ Please enter webhook URL', 'error');
-                return;
-            }
-
-            if (!selectedFile) {
-                updateStatus('❌ No audio selected', 'error');
-                return;
-            }
-
-            try {
-                sendBtn.disabled = true;
-                updateStatus('📤 Sending to n8n... (this may take 10-20 seconds)', 'info');
-
-                const url = webhookUrl.value.trim();
-                
-                // Create FormData to send file properly
-                const formData = new FormData();
-                formData.append('file', selectedFile, 'voice.wav');
-
-                // Read file as ArrayBuffer
-                const arrayBuffer = await selectedFile.arrayBuffer();
-                
-                const response = await fetch(url, {
-                    method: 'POST',
-                    body: arrayBuffer,
-                    headers: {
-                        'Content-Type': 'audio/wav',
-                        'Accept': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
-                    },
-                    mode: 'cors',
-                    credentials: 'omit'
-                });
-
-                console.log('Response status:', response.status);
-                console.log('Response headers:', response.headers);
-
-                if (response.ok || response.status === 200) {
-                    updateStatus('✅ Processing complete! Downloading file...', 'success');
-                    
-                    const blob = await response.blob();
-                    console.log('Blob size:', blob.size);
-                    
-                    if (blob.size === 0) {
-                        updateStatus('❌ Received empty file. Check n8n workflow.', 'error');
-                        sendBtn.disabled = selectedFile ? false : true;
-                        return;
-                    }
-                    
-                    const objUrl = window.URL.createObjectURL(blob);
-                    const link = document.createElement('a');
-                    link.href = objUrl;
-                    link.download = `marathi_transcription_${Date.now()}.docx`;
-                    document.body.appendChild(link);
-                    link.click();
-                    document.body.removeChild(link);
-                    window.URL.revokeObjectURL(objUrl);
-                    
-                    updateStatus('✅ File downloaded successfully! Check your Downloads folder.', 'success');
-                    selectedFile = null;
-                    fileName.textContent = '';
-                    sendBtn.disabled = true;
-                } else if (response.status === 413) {
-                    updateStatus('❌ File too large. Max 25MB. Try shorter recording.', 'error');
-                } else if (response.status === 408) {
-                    updateStatus('❌ Request timeout. n8n took too long. Try again.', 'error');
-                } else {
-                    const errorText = await response.text();
-                    console.log('Error response:', errorText);
-                    updateStatus(`❌ Error ${response.status}: Check webhook URL is correct. Response: ${errorText.substring(0, 100)}`, 'error');
-                }
-            } catch (error) {
-                console.error('Detailed error:', error);
-                
-                if (error.message.includes('Failed to fetch')) {
-                    updateStatus('❌ CORS Error or network blocked. Solutions: 1) Check webhook URL 2) Ensure n8n is running 3) Check firewall', 'error');
-                } else if (error.message.includes('Network')) {
-                    updateStatus('❌ Network error. Check internet connection.', 'error');
-                } else if (error.message.includes('timeout')) {
-                    updateStatus('❌ Request timeout. n8n server not responding.', 'error');
-                } else {
-                    updateStatus(`❌ Error: ${error.message}. Check browser console (F12) for details.`, 'error');
-                }
-            } finally {
-                sendBtn.disabled = selectedFile ? false : true;
-            }
+          if (!webhookUrl.value.trim() || !selectedFile) {
+            updateStatus('❌ Missing data', 'error');
+            return;
+          }
+        
+          try {
+            sendBtn.disabled = true;
+            updateStatus('📤 Uploading audio...', 'info');
+        
+            const url = webhookUrl.value.trim();
+            const formData = new FormData();
+            formData.append('data', selectedFile, 'voice.wav');
+        
+            const response = await fetch(url, {
+              method: 'POST',
+              body: formData
+            });
+        
+            if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        
+            const blob = await response.blob();
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = `marathi_transcription_${Date.now()}.docx`;
+            link.click();
+        
+            updateStatus('✅ Done! File downloaded.', 'success');
+          } catch (err) {
+            updateStatus(`❌ Error: ${err.message}`, 'error');
+          } finally {
+            sendBtn.disabled = false;
+          }
         });
+
 
         function updateRecordingTime() {
             const elapsed = Math.floor((Date.now() - recordingStartTime) / 1000);
